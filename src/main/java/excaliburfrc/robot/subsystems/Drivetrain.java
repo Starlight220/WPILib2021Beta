@@ -16,12 +16,15 @@ import edu.wpi.first.wpilibj.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.wpilibj.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.wpilibj.kinematics.DifferentialDriveWheelSpeeds;
+import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
+import edu.wpi.first.wpilibj.simulation.Field2d;
+import edu.wpi.first.wpilibj.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.trajectory.Trajectory;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RamseteCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-public class Chassi extends SubsystemBase {
+public class Drivetrain extends SubsystemBase {
   private CANSparkMax leftLeader;
   private CANSparkMax leftFollower;
   private CANSparkMax rightLeader;
@@ -33,7 +36,11 @@ public class Chassi extends SubsystemBase {
   private DifferentialDrive drive;
   private DifferentialDriveOdometry odometry;
 
-  public Chassi() {
+  // simulation
+  private Field2d field;
+  private DifferentialDrivetrainSim simDrive;
+
+  public Drivetrain() {
     leftLeader = new CANSparkMax(LEFT_LEADER, kBrushless);
     leftFollower = new CANSparkMax(LEFT_FOLLOWER, kBrushless);
     leftFollower.follow(leftLeader);
@@ -55,6 +62,22 @@ public class Chassi extends SubsystemBase {
     odometry = new DifferentialDriveOdometry(Rotation2d.fromDegrees(0.0));
   }
 
+  public void initSimulation() {
+    simDrive =
+        new DifferentialDrivetrainSim(
+            DCMotor.getNEO(2), GEARING, MOMENT_OF_INERTIA, MASS, WHEEL_RADIUS, TRACK_WIDTH);
+    field = new Field2d();
+  }
+
+  @Override
+  public void simulationPeriodic() {
+    field.setRobotPose(odometry.getPoseMeters());
+    simDrive.update(0.2);
+    simDrive.setInputs(
+        leftLeader.get() * RobotController.getBatteryVoltage(),
+        rightLeader.get() * RobotController.getBatteryVoltage());
+  }
+
   @Override
   public void periodic() {
     odometry.update(Rotation2d.fromDegrees(gyro.getAngle()), leftEncoder.get(), rightEncoder.get());
@@ -63,7 +86,7 @@ public class Chassi extends SubsystemBase {
   public Command buildRamseteCommand(Trajectory trajectory) {
     return new RamseteCommand(
             trajectory,
-            odometry::getPoseMeters,
+            () -> odometry.getPoseMeters(),
             new RamseteController(),
             new SimpleMotorFeedforward(kV, kS, kA),
             new DifferentialDriveKinematics(TRACK_WIDTH),
@@ -72,9 +95,8 @@ public class Chassi extends SubsystemBase {
             new PIDController(0, 0, 0),
             (left, right) ->
                 drive.tankDrive(
-                    RobotController.getBatteryVoltage() * left,
-                    RobotController.getBatteryVoltage() * right),
-            // (double left, double right)->drive.set,
+                    left / RobotController.getBatteryVoltage(),
+                    right / RobotController.getBatteryVoltage()),
             this)
         .andThen(drive::stopMotor, this);
   }

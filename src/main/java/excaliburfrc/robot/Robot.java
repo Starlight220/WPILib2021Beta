@@ -7,9 +7,13 @@
 
 package excaliburfrc.robot;
 
-import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.trajectory.Trajectory;
+import edu.wpi.first.wpilibj.trajectory.TrajectoryUtil;
+import edu.wpi.first.wpilibj2.command.Command;
+import excaliburfrc.robot.subsystems.Drivetrain;
+import java.io.IOException;
+import java.nio.file.Path;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -18,21 +22,15 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * project.
  */
 public class Robot extends TimedRobot {
-  private static final String kDefaultAuto = "Default";
-  private static final String kCustomAuto = "My Auto";
-  private String m_autoSelected;
-  private final SendableChooser<String> m_chooser = new SendableChooser<>();
+  Drivetrain m_drive = new Drivetrain();
+  Command autoCommand;
 
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
    */
   @Override
-  public void robotInit() {
-    m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
-    m_chooser.addOption("My Auto", kCustomAuto);
-    SmartDashboard.putData("Auto choices", m_chooser);
-  }
+  public void robotInit() {}
 
   /**
    * This function is called every robot packet, no matter the mode. Use this for items like
@@ -56,24 +54,24 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousInit() {
-    m_autoSelected = m_chooser.getSelected();
-    // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
-    System.out.println("Auto selected: " + m_autoSelected);
+    Trajectory trajectory = null;
+    try {
+      Path path = Filesystem.getDeployDirectory().toPath().resolve("forward.wpilib.json");
+      trajectory = TrajectoryUtil.fromPathweaverJson(path);
+    } catch (IOException e) {
+      DriverStation.reportError(e.getMessage(), e.getStackTrace());
+    }
+    if (trajectory != null) {
+      autoCommand = m_drive.buildRamseteCommand(trajectory);
+    }
+    if (autoCommand != null) {
+      autoCommand.schedule();
+    }
   }
 
   /** This function is called periodically during autonomous. */
   @Override
-  public void autonomousPeriodic() {
-    switch (m_autoSelected) {
-      case kCustomAuto:
-        // Put custom auto code here
-        break;
-      case kDefaultAuto:
-      default:
-        // Put default auto code here
-        break;
-    }
-  }
+  public void autonomousPeriodic() {}
 
   /** This function is called once when teleop is enabled. */
   @Override
