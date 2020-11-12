@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.trajectory.Trajectory;
 import edu.wpi.first.wpilibj.trajectory.TrajectoryUtil;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import excaliburfrc.robot.subsystems.Drivetrain;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -40,7 +41,14 @@ public class Robot extends TimedRobot {
    * SmartDashboard integrated updating.
    */
   @Override
-  public void robotPeriodic() {}
+  public void robotPeriodic() {
+    CommandScheduler.getInstance().run();
+  }
+
+  @Override
+  public void simulationInit() {
+    m_drive.initSimulation();
+  }
 
   /**
    * This autonomous (along with the chooser code above) shows how to select between different

@@ -5,6 +5,7 @@ import static excaliburfrc.robot.subsystems.Ports.ChassiPorts.*;
 
 import com.kauailabs.navx.frc.AHRS;
 import com.revrobotics.CANSparkMax;
+import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.SPI;
@@ -12,12 +13,12 @@ import edu.wpi.first.wpilibj.controller.PIDController;
 import edu.wpi.first.wpilibj.controller.RamseteController;
 import edu.wpi.first.wpilibj.controller.SimpleMotorFeedforward;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import edu.wpi.first.wpilibj.geometry.Pose2d;
 import edu.wpi.first.wpilibj.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.wpilibj.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.wpilibj.kinematics.DifferentialDriveWheelSpeeds;
-import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
-import edu.wpi.first.wpilibj.simulation.Field2d;
+import edu.wpi.first.wpilibj.simulation.*;
 import edu.wpi.first.wpilibj.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.trajectory.Trajectory;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -39,6 +40,9 @@ public class Drivetrain extends SubsystemBase {
   // simulation
   private Field2d field;
   private DifferentialDrivetrainSim simDrive;
+  private EncoderSim leftEncoderSim;
+  private EncoderSim rightEncoderSim;
+  private SimDouble gyroSim;
 
   public Drivetrain() {
     leftLeader = new CANSparkMax(LEFT_LEADER, kBrushless);
@@ -66,6 +70,9 @@ public class Drivetrain extends SubsystemBase {
     simDrive =
         new DifferentialDrivetrainSim(
             DCMotor.getNEO(2), GEARING, MOMENT_OF_INERTIA, MASS, WHEEL_RADIUS, TRACK_WIDTH);
+    leftEncoderSim = new EncoderSim(leftEncoder);
+    rightEncoderSim = new EncoderSim(rightEncoder);
+    gyroSim = new SimDeviceSim("navX-Sensor[0]").getDouble("Yaw");
     field = new Field2d();
   }
 
@@ -73,9 +80,18 @@ public class Drivetrain extends SubsystemBase {
   public void simulationPeriodic() {
     field.setRobotPose(odometry.getPoseMeters());
     simDrive.update(0.2);
+    leftEncoderSim.setDistance(simDrive.getState(DifferentialDrivetrainSim.State.kLeftPosition));
+    leftEncoderSim.setRate(simDrive.getState(DifferentialDrivetrainSim.State.kLeftVelocity));
+    rightEncoderSim.setDistance(simDrive.getState(DifferentialDrivetrainSim.State.kRightPosition));
+    rightEncoderSim.setRate(simDrive.getState(DifferentialDrivetrainSim.State.kRightVelocity));
+    gyroSim.set(-simDrive.getHeading().getDegrees());
     simDrive.setInputs(
         leftLeader.get() * RobotController.getBatteryVoltage(),
         rightLeader.get() * RobotController.getBatteryVoltage());
+  }
+
+  public Pose2d getPose() {
+    return odometry.getPoseMeters();
   }
 
   @Override
