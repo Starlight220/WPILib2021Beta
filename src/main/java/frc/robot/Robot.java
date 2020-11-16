@@ -8,8 +8,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.simulation.RoboRioSim;
-import edu.wpi.first.wpilibj.simulation.BatterySim;
+import edu.wpi.first.wpilibj.simulation.*;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
 /**
@@ -18,7 +17,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
  * the sim GUI's {@link edu.wpi.first.wpilibj.simulation.Field2d} class.
  */
 public class Robot extends TimedRobot {
-  private RobotContainer m_robotContainer;
+  public RobotContainer m_robotContainer;
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -50,10 +49,13 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousInit() {
     m_robotContainer.getAutonomousCommand().schedule();
+    SimHooks.pauseTiming();
+
   }
 
   @Override
   public void disabledInit() {
     CommandScheduler.getInstance().cancelAll();
   }
+
 }
