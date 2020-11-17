@@ -21,6 +21,11 @@ import edu.wpi.first.wpilibj.simulation.*;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class DriveSubsystem extends SubsystemBase {
   // The motors on the left side of the drive.
   private final SpeedControllerGroup m_leftMotors =
@@ -64,6 +69,7 @@ public class DriveSubsystem extends SubsystemBase {
   private Field2d m_fieldSim;
   private SimDouble m_gyroAngleSim;
 
+  public static AtomicBoolean isInitialized = new AtomicBoolean(false);
   /**
    * Creates a new DriveSubsystem.
    */
@@ -83,14 +89,13 @@ public class DriveSubsystem extends SubsystemBase {
             Constants.DriveConstants.kDriveGearing,
             Constants.DriveConstants.kTrackwidthMeters,
           Constants.DriveConstants.kWheelDiameterMeters / 2.0);
+      m_drivetrainSimulator.setPose(new Pose2d(0,0, Rotation2d.fromDegrees(0)));
 
       // The encoder and gyro angle sims let us set simulated sensor readings
       m_leftEncoderSim = new EncoderSim(m_leftEncoder);
       m_rightEncoderSim = new EncoderSim(m_rightEncoder);
-      m_gyroAngleSim =
-            new SimDeviceSim("navX-Sensor[0]")
-                  .getDouble("Yaw");
-
+      m_gyroAngleSim = new SimDeviceSim("navX-Sensor[0]").getDouble("Yaw");
+      m_gyroAngleSim.set(m_gyro.getAngle());
       // the Field2d class lets us visualize our robot in the simulation GUI.
       m_fieldSim = new Field2d();
     }
@@ -103,6 +108,8 @@ public class DriveSubsystem extends SubsystemBase {
           m_rightEncoder.getDistance());
   }
 
+  public static AtomicInteger simPerCounter = new AtomicInteger(0);
+  public static List<Double> valuelist = new ArrayList<>(200);
   @Override
   public void simulationPeriodic() {
     // To update our simulation, we set motor voltage inputs, update the simulation,
@@ -117,9 +124,12 @@ public class DriveSubsystem extends SubsystemBase {
     m_leftEncoderSim.setRate(m_drivetrainSimulator.getState(DifferentialDrivetrainSim.State.kLeftVelocity));
     m_rightEncoderSim.setDistance(m_drivetrainSimulator.getState(DifferentialDrivetrainSim.State.kRightPosition));
     m_rightEncoderSim.setRate(m_drivetrainSimulator.getState(DifferentialDrivetrainSim.State.kRightVelocity));
-    m_gyroAngleSim.set(-m_drivetrainSimulator.getHeading().getDegrees());
+    var value = -m_drivetrainSimulator.getHeading().getDegrees();
+    valuelist.add(value);
+    m_gyroAngleSim.set(value);
 
     m_fieldSim.setRobotPose(getPose());
+    simPerCounter.addAndGet(1);
   }
 
   /**
