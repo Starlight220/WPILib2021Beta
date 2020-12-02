@@ -62,6 +62,30 @@ public class RobotContainer {
     return m_robotDrive;
   }
 
+  public static Trajectory traj =
+      TrajectoryGenerator.generateTrajectory(
+          // Start at the origin facing the +X direction
+          new Pose2d(0, 0, new Rotation2d(0)),
+          // Pass through these two interior waypoints, making an 's' curve path
+          List.of(),
+          // End 3 meters straight ahead of where we started, facing forward
+          new Pose2d(6, 6, new Rotation2d(0)),
+          // Pass config
+          new TrajectoryConfig(
+                  Constants.AutoConstants.kMaxSpeedMetersPerSecond,
+                  Constants.AutoConstants.kMaxAccelerationMetersPerSecondSquared)
+              // Add kinematics to ensure max speed is actually obeyed
+              .setKinematics(Constants.DriveConstants.kDriveKinematics)
+              // Apply the voltage constraint
+              .addConstraint(
+                  new DifferentialDriveVoltageConstraint(
+                      new SimpleMotorFeedforward(
+                          Constants.DriveConstants.ksVolts,
+                          Constants.DriveConstants.kvVoltSecondsPerMeter,
+                          Constants.DriveConstants.kaVoltSecondsSquaredPerMeter),
+                      Constants.DriveConstants.kDriveKinematics,
+                      7)));
+
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
    *
@@ -70,40 +94,13 @@ public class RobotContainer {
   public Command getAutonomousCommand() {
 
     // Create a voltage constraint to ensure we don't accelerate too fast
-    var autoVoltageConstraint =
-        new DifferentialDriveVoltageConstraint(
-            new SimpleMotorFeedforward(
-                Constants.DriveConstants.ksVolts,
-                Constants.DriveConstants.kvVoltSecondsPerMeter,
-                Constants.DriveConstants.kaVoltSecondsSquaredPerMeter),
-            Constants.DriveConstants.kDriveKinematics,
-            7);
 
     // Create config for trajectory
-    TrajectoryConfig config =
-        new TrajectoryConfig(
-                Constants.AutoConstants.kMaxSpeedMetersPerSecond,
-                Constants.AutoConstants.kMaxAccelerationMetersPerSecondSquared)
-            // Add kinematics to ensure max speed is actually obeyed
-            .setKinematics(Constants.DriveConstants.kDriveKinematics)
-            // Apply the voltage constraint
-            .addConstraint(autoVoltageConstraint);
 
     // An example trajectory to follow.  All units in meters.
-    Trajectory exampleTrajectory =
-        TrajectoryGenerator.generateTrajectory(
-            // Start at the origin facing the +X direction
-            new Pose2d(0, 0, new Rotation2d(0)),
-            // Pass through these two interior waypoints, making an 's' curve path
-            List.of(),
-            // End 3 meters straight ahead of where we started, facing forward
-            new Pose2d(6, 6, new Rotation2d(0)),
-            // Pass config
-            config);
-
     RamseteCommand ramseteCommand =
         new RamseteCommand(
-            exampleTrajectory,
+            traj,
             m_robotDrive::getPose,
             new RamseteController(
                 Constants.AutoConstants.kRamseteB, Constants.AutoConstants.kRamseteZeta),

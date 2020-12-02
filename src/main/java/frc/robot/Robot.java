@@ -12,11 +12,12 @@ import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.commands.TuneDrivePID;
 
 /**
- * This is a sample program to demonstrate the use of state-space classes in robot simulation.
- * This robot has a flywheel, elevator, arm and differential drivetrain, and interfaces with
- * the sim GUI's {@link edu.wpi.first.wpilibj.simulation.Field2d} class.
+ * This is a sample program to demonstrate the use of state-space classes in robot simulation. This
+ * robot has a flywheel, elevator, arm and differential drivetrain, and interfaces with the sim
+ * GUI's {@link edu.wpi.first.wpilibj.simulation.Field2d} class.
  */
 public class Robot extends TimedRobot {
   public RobotContainer m_robotContainer;
@@ -30,6 +31,7 @@ public class Robot extends TimedRobot {
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
     m_robotContainer = new RobotContainer();
+    tuneDrivePID = new TuneDrivePID(m_robotContainer.getRobotDrive());
   }
 
   @Override
@@ -58,4 +60,10 @@ public class Robot extends TimedRobot {
     CommandScheduler.getInstance().cancelAll();
   }
 
+  Command tuneDrivePID;
+
+  @Override
+  public void teleopInit() {
+    tuneDrivePID.schedule();
+  }
 }

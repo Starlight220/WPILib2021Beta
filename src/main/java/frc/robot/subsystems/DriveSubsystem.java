@@ -17,10 +17,11 @@ import edu.wpi.first.wpilibj.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.wpilibj.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.wpilibj.simulation.*;
-import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim.State;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpiutil.math.VecBuilder;
 import frc.robot.Constants;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DriveSubsystem extends SubsystemBase {
   // The motors on the left side of the drive.
@@ -69,8 +70,6 @@ public class DriveSubsystem extends SubsystemBase {
   private Field2d m_fieldSim;
   private SimDouble m_gyroAngleSim;
 
-  public static AtomicBoolean isInitialized = new AtomicBoolean(false);
-
   /** Creates a new DriveSubsystem. */
   public DriveSubsystem() {
     this.setSubsystem("Drive");
@@ -89,7 +88,8 @@ public class DriveSubsystem extends SubsystemBase {
               Constants.DriveConstants.kDriveGearbox,
               Constants.DriveConstants.kDriveGearing,
               Constants.DriveConstants.kTrackwidthMeters,
-              Constants.DriveConstants.kWheelDiameterMeters / 2.0);
+              Constants.DriveConstants.kWheelDiameterMeters / 2.0,
+              VecBuilder.fill(0, 0, 1e-3, 0, 0, 5e-3, 5e-3));
       m_drivetrainSimulator.setPose(new Pose2d(0, 0, Rotation2d.fromDegrees(0)));
 
       // The encoder and gyro angle sims let us set simulated sensor readings
@@ -122,13 +122,14 @@ public class DriveSubsystem extends SubsystemBase {
         -m_rightMotors.get() * RobotController.getBatteryVoltage());
     m_drivetrainSimulator.update(0.020);
 
-    m_leftEncoderSim.setDistance(m_drivetrainSimulator.getState(State.kLeftPosition));
-    m_leftEncoderSim.setRate(m_drivetrainSimulator.getState(State.kLeftVelocity));
-    m_rightEncoderSim.setDistance(m_drivetrainSimulator.getState(State.kRightPosition));
-    m_rightEncoderSim.setRate(m_drivetrainSimulator.getState(State.kRightVelocity));
+    m_leftEncoderSim.setDistance(m_drivetrainSimulator.getLeftPositionMeters());
+    m_rightEncoderSim.setDistance(m_drivetrainSimulator.getRightPositionMeters());
+    m_leftEncoderSim.setRate(m_drivetrainSimulator.getLeftVelocityMetersPerSecond());
+    m_rightEncoderSim.setRate(m_drivetrainSimulator.getRightVelocityMetersPerSecond());
     m_gyroAngleSim.set(-m_drivetrainSimulator.getHeading().getDegrees());
 
     m_fieldSim.setRobotPose(m_odometry.getPoseMeters());
+    SmartDashboard.putData("Field", m_fieldSim);
   }
 
   /**
@@ -167,7 +168,7 @@ public class DriveSubsystem extends SubsystemBase {
   public void resetOdometry(Pose2d pose) {
     resetEncoders();
     m_odometry.resetPosition(pose, Rotation2d.fromDegrees(getHeading()));
-    if( RobotBase.isSimulation()) {
+    if (RobotBase.isSimulation()) {
       m_drivetrainSimulator.setPose(m_odometry.getPoseMeters());
     }
   }
@@ -214,5 +215,4 @@ public class DriveSubsystem extends SubsystemBase {
     return Math.IEEEremainder(m_gyro.getAngle(), 360)
         * (Constants.DriveConstants.kGyroReversed ? -1.0 : 1.0);
   }
-
 }
