@@ -8,51 +8,51 @@
 package frc.robot.subsystems;
 
 import com.kauailabs.navx.frc.AHRS;
-import edu.wpi.first.hal.*;
+import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.SPI.Port;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.geometry.Pose2d;
 import edu.wpi.first.wpilibj.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.interfaces.Gyro;
 import edu.wpi.first.wpilibj.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.wpilibj.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.wpilibj.simulation.*;
+import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim.State;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class DriveSubsystem extends SubsystemBase {
   // The motors on the left side of the drive.
   private final SpeedControllerGroup m_leftMotors =
-//          new WPI_TalonSRX(DriveConstants.kLeftMotor1Port);
-        new SpeedControllerGroup(new PWMVictorSPX(Constants.DriveConstants.kLeftMotor1Port),
-              new PWMVictorSPX(Constants.DriveConstants.kLeftMotor2Port));
+      //          new WPI_TalonSRX(DriveConstants.kLeftMotor1Port);
+      new SpeedControllerGroup(
+          new PWMVictorSPX(Constants.DriveConstants.kLeftMotor1Port),
+          new PWMVictorSPX(Constants.DriveConstants.kLeftMotor2Port));
 
   // The motors on the right side of the drive.
   private final SpeedControllerGroup m_rightMotors =
-//          new WPI_TalonSRX(DriveConstants.kRightMotor1Port);
-        new SpeedControllerGroup(new PWMVictorSPX(Constants.DriveConstants.kRightMotor1Port),
-              new PWMVictorSPX(Constants.DriveConstants.kRightMotor2Port));
+      //          new WPI_TalonSRX(DriveConstants.kRightMotor1Port);
+      new SpeedControllerGroup(
+          new PWMVictorSPX(Constants.DriveConstants.kRightMotor1Port),
+          new PWMVictorSPX(Constants.DriveConstants.kRightMotor2Port));
 
   // The robot's drive
   private final DifferentialDrive m_drive = new DifferentialDrive(m_leftMotors, m_rightMotors);
 
   // The left-side drive encoder
   private final Encoder m_leftEncoder =
-        new Encoder(Constants.DriveConstants.kLeftEncoderPorts[0],
-              Constants.DriveConstants.kLeftEncoderPorts[1],
-              Constants.DriveConstants.kLeftEncoderReversed);
+      new Encoder(
+          Constants.DriveConstants.kLeftEncoderPorts[0],
+          Constants.DriveConstants.kLeftEncoderPorts[1],
+          Constants.DriveConstants.kLeftEncoderReversed);
 
   // The right-side drive encoder
   private final Encoder m_rightEncoder =
-        new Encoder(Constants.DriveConstants.kRightEncoderPorts[0],
-              Constants.DriveConstants.kRightEncoderPorts[1],
-              Constants.DriveConstants.kRightEncoderReversed);
+      new Encoder(
+          Constants.DriveConstants.kRightEncoderPorts[0],
+          Constants.DriveConstants.kRightEncoderPorts[1],
+          Constants.DriveConstants.kRightEncoderReversed);
 
   // The gyro sensor
   private final AHRS m_gyro = new AHRS(Port.kMXP);
@@ -70,10 +70,10 @@ public class DriveSubsystem extends SubsystemBase {
   private SimDouble m_gyroAngleSim;
 
   public static AtomicBoolean isInitialized = new AtomicBoolean(false);
-  /**
-   * Creates a new DriveSubsystem.
-   */
+
+  /** Creates a new DriveSubsystem. */
   public DriveSubsystem() {
+    this.setSubsystem("Drive");
     // Sets the distance per pulse for the encoders
     m_leftEncoder.setDistancePerPulse(Constants.DriveConstants.kEncoderDistancePerPulse);
     m_rightEncoder.setDistancePerPulse(Constants.DriveConstants.kEncoderDistancePerPulse);
@@ -83,13 +83,14 @@ public class DriveSubsystem extends SubsystemBase {
 
     if (RobotBase.isSimulation()) { // If our robot is simulated
       // This class simulates our drivetrain's motion around the field.
-      m_drivetrainSimulator = new DifferentialDrivetrainSim(
-            Constants.DriveConstants.kDrivetrainPlant,
-            Constants.DriveConstants.kDriveGearbox,
-            Constants.DriveConstants.kDriveGearing,
-            Constants.DriveConstants.kTrackwidthMeters,
-          Constants.DriveConstants.kWheelDiameterMeters / 2.0);
-      m_drivetrainSimulator.setPose(new Pose2d(0,0, Rotation2d.fromDegrees(0)));
+      m_drivetrainSimulator =
+          new DifferentialDrivetrainSim(
+              Constants.DriveConstants.kDrivetrainPlant,
+              Constants.DriveConstants.kDriveGearbox,
+              Constants.DriveConstants.kDriveGearing,
+              Constants.DriveConstants.kTrackwidthMeters,
+              Constants.DriveConstants.kWheelDiameterMeters / 2.0);
+      m_drivetrainSimulator.setPose(new Pose2d(0, 0, Rotation2d.fromDegrees(0)));
 
       // The encoder and gyro angle sims let us set simulated sensor readings
       m_leftEncoderSim = new EncoderSim(m_leftEncoder);
@@ -104,38 +105,35 @@ public class DriveSubsystem extends SubsystemBase {
   @Override
   public void periodic() {
     // Update the odometry in the periodic block
-    m_odometry.update(Rotation2d.fromDegrees(getHeading()), m_leftEncoder.getDistance(),
-          m_rightEncoder.getDistance());
+    m_odometry.update(
+        Rotation2d.fromDegrees(getHeading()),
+        m_leftEncoder.getDistance(),
+        m_rightEncoder.getDistance());
   }
 
-  public static AtomicInteger simPerCounter = new AtomicInteger(0);
-  public static List<Double> valuelist = new ArrayList<>(200);
   @Override
   public void simulationPeriodic() {
     // To update our simulation, we set motor voltage inputs, update the simulation,
     // and write the simulated positions and velocities to our simulated encoder and gyro.
     // We negate the right side so that positive voltages make the right side
     // move forward.
-    m_drivetrainSimulator.setInputs(m_leftMotors.get() * RobotController.getBatteryVoltage(),
-          -m_rightMotors.get() * RobotController.getBatteryVoltage());
+    m_drivetrainSimulator.setInputs(
+        m_leftMotors.get() * RobotController.getBatteryVoltage(),
+        -m_rightMotors.get() * RobotController.getBatteryVoltage());
     m_drivetrainSimulator.update(0.020);
 
-    m_leftEncoderSim.setDistance(m_drivetrainSimulator.getState(DifferentialDrivetrainSim.State.kLeftPosition));
-    m_leftEncoderSim.setRate(m_drivetrainSimulator.getState(DifferentialDrivetrainSim.State.kLeftVelocity));
-    m_rightEncoderSim.setDistance(m_drivetrainSimulator.getState(DifferentialDrivetrainSim.State.kRightPosition));
-    m_rightEncoderSim.setRate(m_drivetrainSimulator.getState(DifferentialDrivetrainSim.State.kRightVelocity));
-    var value = -m_drivetrainSimulator.getHeading().getDegrees();
-    valuelist.add(value);
-    m_gyroAngleSim.set(value);
+    m_leftEncoderSim.setDistance(m_drivetrainSimulator.getState(State.kLeftPosition));
+    m_leftEncoderSim.setRate(m_drivetrainSimulator.getState(State.kLeftVelocity));
+    m_rightEncoderSim.setDistance(m_drivetrainSimulator.getState(State.kRightPosition));
+    m_rightEncoderSim.setRate(m_drivetrainSimulator.getState(State.kRightVelocity));
+    m_gyroAngleSim.set(-m_drivetrainSimulator.getHeading().getDegrees());
 
-    m_fieldSim.setRobotPose(getPose());
-    simPerCounter.addAndGet(1);
+    m_fieldSim.setRobotPose(m_odometry.getPoseMeters());
   }
 
   /**
-   * Returns the current being drawn by the drivetrain. This works in SIMULATION ONLY!
-   * If you want it to work elsewhere, use the code in
-   * {@link DifferentialDrivetrainSim#getCurrentDrawAmps()}
+   * Returns the current being drawn by the drivetrain. This works in SIMULATION ONLY! If you want
+   * it to work elsewhere, use the code in {@link DifferentialDrivetrainSim#getCurrentDrawAmps()}
    *
    * @return The drawn current in Amps.
    */
@@ -169,6 +167,9 @@ public class DriveSubsystem extends SubsystemBase {
   public void resetOdometry(Pose2d pose) {
     resetEncoders();
     m_odometry.resetPosition(pose, Rotation2d.fromDegrees(getHeading()));
+    if( RobotBase.isSimulation()) {
+      m_drivetrainSimulator.setPose(m_odometry.getPoseMeters());
+    }
   }
 
   /**
@@ -184,13 +185,12 @@ public class DriveSubsystem extends SubsystemBase {
   /**
    * Controls the left and right sides of the drive directly with voltages.
    *
-   * @param leftVolts  the commanded left output
+   * @param leftVolts the commanded left output
    * @param rightVolts the commanded right output
    */
   public void tankDriveVolts(double leftVolts, double rightVolts) {
     var batteryVoltage = RobotController.getBatteryVoltage();
-    if (Math.max(Math.abs(leftVolts), Math.abs(rightVolts))
-          > batteryVoltage) {
+    if (Math.max(Math.abs(leftVolts), Math.abs(rightVolts)) > batteryVoltage) {
       leftVolts *= batteryVoltage / 12.0;
       rightVolts *= batteryVoltage / 12.0;
     }
@@ -199,21 +199,10 @@ public class DriveSubsystem extends SubsystemBase {
     m_drive.feed();
   }
 
-  /**
-   * Resets the drive encoders to currently read a position of 0.
-   */
+  /** Resets the drive encoders to currently read a position of 0. */
   public void resetEncoders() {
     m_leftEncoder.reset();
     m_rightEncoder.reset();
-  }
-
-  /**
-   * Sets the max output of the drive.  Useful for scaling the drive to drive more slowly.
-   *
-   * @param maxOutput the maximum output to which the drive will be constrained
-   */
-  public void setMaxOutput(double maxOutput) {
-    m_drive.setMaxOutput(maxOutput);
   }
 
   /**
@@ -222,7 +211,8 @@ public class DriveSubsystem extends SubsystemBase {
    * @return the robot's heading in degrees, from -180 to 180
    */
   public double getHeading() {
-    return Math.IEEEremainder(m_gyro.getAngle(), 360) * (Constants.DriveConstants.kGyroReversed ? -1.0 : 1.0);
+    return Math.IEEEremainder(m_gyro.getAngle(), 360)
+        * (Constants.DriveConstants.kGyroReversed ? -1.0 : 1.0);
   }
 
 }
